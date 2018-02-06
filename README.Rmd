@@ -1,16 +1,27 @@
+---
+output: github_document
+---
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
-atemplatesr
-===========
+
+```{r, echo = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.path = "README-"
+)
+```
+
+# atemplatesr
 
 This package will contains teaching and research templates for personal use.
 
-Installation
-------------
+## Installation
 
 You can install atemplatesr from github with:
 
-``` r
+```{r gh-installation, eval = FALSE}
 # install.packages("devtools")
 devtools::install_github("AnestisTouloumis/atemplatesr")
 ```
+

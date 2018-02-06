@@ -1,0 +1,29 @@
+---
+title: "Dependence tests in high-dimensional settings under a Kronecker product covariance decomposition"
+author: "Anestis Touloumis"
+institute: "University of Brighton" 
+date: "Joint work with J. C. Marioni and S. Tavar?"
+header-includes:
+   - \usepackage{bm}
+   - \usepackage{booktabs}
+   - \AtBeginSection{}
+output: 
+    beamer_presentation:
+      theme: "Singapore"
+      colortheme: "orchid"
+      fonttheme: "structuresmallcapsserif"
+slide_level: 2      
+fontsize: 11pt  
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+# Section 1
+
+## A slide
+
+# Section 2
+
+## Another slide
