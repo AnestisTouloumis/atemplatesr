@@ -1,0 +1,172 @@
+---
+title: "Statistical Analysis: Main or Overall"
+date: "`r format(Sys.Date(), '%A %d %B, %Y')`"
+output:
+  pdf_document:
+    keep_tex: yes
+bibliography: "markdown.bib"
+biblio-style: "apalike"
+link-citations: true    
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  echo = FALSE,
+  eval = FALSE,
+  collapse = TRUE,
+  prompt = TRUE,
+  comment = NA,
+  tidy = TRUE)
+```
+
+
+# Methods and Software
+Statistical analysis was based on the Generalized Estimating Equations method [@Liang1986] as this is implemented in the R [@RCoreTeam2013] package geepack [@geepack]. In addition, the functions `ComparisonStats` and `AllContrasts` were developed to evaluate the statistical significance of the desired comparisons for the accuracy data. 
+```{r}
+ComparisonStats <- function(FittedModel,Lmatrix,alpha=0.05){
+    Lmatrix <- matrix(Lmatrix, nrow = 1)
+    ModelBetas <- FittedModel$geese$beta
+    ModelVCov <- FittedModel$geese$vbeta
+    Estimate <- drop(Lmatrix %*% ModelBetas)
+    SdError <- sqrt(drop(Lmatrix %*% ModelVCov %*% t(Lmatrix)))
+    CBs <- Estimate + qnorm(c(alpha/2, 1 - alpha/2)) * SdError
+    pvalue <- 2 * pnorm(-abs(Estimate/SdError))
+    ans <- c(exp(c(Estimate, CBs)), round(pvalue, 4))
+    names(ans) <- c("Estimate", paste0((1 - alpha) * 100, "% LB"), 
+                    paste0((1 - alpha) * 100, "% UB"), "p-value")
+    ans
+}
+```
+
+```{r}
+contrasts_of_interest <- function(model, data, ignore_levels = NULL, varying = NULL) {
+data <- as.data.frame(data)
+xformula <- formula(model)
+model_terms <- terms(xformula)
+model_factors <- rownames(attr(model_terms, "factors"))[-1]
+data_contrasts <- expand.grid(lapply(data[, model_factors], unique))
+xformula <- as.formula(paste("~", paste(attr(terms(xformula), "term.labels"), 
+                                        collapse = "+")))
+model_frame_contrasts <- model.matrix(xformula, data_contrasts)
+if(!is.null(ignore_levels)){
+  stopifnot(all(names(ignore_levels)%in%names(data_contrasts)))
+  ignore_levels_index <- which(rowSums(data_contrasts==ignore_levels)!=0)
+  data_contrasts <- data_contrasts[-ignore_levels_index, ]
+  model_frame_contrasts <- model_frame_contrasts[-ignore_levels_index, ]
+}
+names_contrasts <- do.call("paste", c(data_contrasts, sep = " & "))
+if(!is.null(varying)) {
+  vunique <- unique(data_contrasts[, varying])
+  p <- nrow(model_frame_contrasts)/length(vunique)
+}
+if( (is.null(varying)) | (p == 1) ){
+  for (i in 1:(nrow(data_contrasts) - 1)) {
+    contrast_1 <- model_frame_contrasts[i, ]
+    for (j in (i + 1):nrow(data_contrasts)) {
+      contrast_2 <- model_frame_contrasts[j, ]
+      cat("## (", names_contrasts[i], ") versus (", names_contrasts[j], ")\n", sep = "")
+      print(ComparisonStats(model, contrast_1 - contrast_2))
+    }
+  }
+} else {
+  for (i in 1:p) {
+    contrast_1 <- model_frame_contrasts[i, ]
+    for (j in 2:length(vunique)) {
+      contrast_2 <- model_frame_contrasts[p * (j - 1) + i, ]
+      cat("## (", names_contrasts[i], ") versus (", names_contrasts[p * (j - 1) + i], ")\n", 
+          sep = "")
+      print(ComparisonStats(model, contrast_1 - contrast_2))
+    }
+  }
+}
+}
+```
+
+# Import Data
+The full data were imported: 
+```{r}
+# Use the Import Dataset tab
+# library(readxl)
+# dataset <- read("path")
+```
+
+
+# Accuracy data analysis
+```{r full_model_accuracy, echo=FALSE}
+# library(geepack)
+# full_model <- geeglm(formula, id , data = dataset, family = binomial)
+```
+
+The following regression model was fitted to the accuracy data 
+\begin{align*}
+\log\left[\frac{\Pr(Y_{ij}=1)}{1-\Pr(Y_{ij}=1)}\right]=&\beta_0+\beta_{1}x_{i1}+\beta_{2}x_{i2}+\beta_3 x_{i3}+\beta_{4}x_{i4}\\
+&+\beta_{5}x_{i1}x_{i4}+\beta_{6}x_{i1}x_{i4}+\beta_{7}x_{i3}x_{i4}
+\end{align*}
+where 
+
+* $\Pr(Y_{ij}=1)$ is the probability for participant $i$ to answer question $j$ correctly.
+* $x_{i1}$ is the indicator for ..., 
+* $x_{i2}$ is the indicator for ..., 
+* $x_{i3}$ is the indicator for ..., 
+* $x_{i4}$ is the indicator for ..., 
+
+for $i = 1, \ldots, `max(full_model$geese$id)`$, corresponding to the individual participants, and $j = 1,\ldots,`max(full_model$geese$clusz)`$
+corresponding to the questions.
+
+```{r, ref.label = 'full_model_accuracy', echo = TRUE, eval = FALSE}
+```
+
+Comparing this model to the model with no interaction term
+```{r}
+# reduced_model <- geeglm(formula, id , data = dataset, family = binomial)
+# Waldts <- anova(full_model, reduced_model)
+# Waldts
+```
+we can conclude that the interaction term (counterplay between factor A and factor B) is/is not significant ($p$ - value $=`Waldts[1,3]`$). 
+
+## Comparison of factor A
+
+## Comparison of factor B
+
+
+# Time data analysis
+```{r full_model_time, echo=FALSE}
+# library(geepack)
+# dataset$log_time <- log(dataset$time)
+# full_model <- geeglm(formula , id, data = dataset[dataset$correct == 1,])
+```
+
+The following regression model was fitted to the time data 
+\begin{align*}
+\log\left(Z_{ij}\right)=&\gamma_0+\gamma_{1}x_{i1}+\gamma_{2}x_{i2}+\gamma_3 x_{i3}+\gamma_{4}x_{i4}\\
+&+\gamma_{5}x_{i1}x_{i4}+\gamma_{6}x_{i1}x_{i4}+\gamma_{7}x_{i3}x_{i4}
+\end{align*}
+where 
+
+* $Z_{ij}$ is the probability for participant $i$ to answer question $j$ correctly.
+* $x_{i1}$ is the indicator for ..., 
+* $x_{i2}$ is the indicator for ..., 
+* $x_{i3}$ is the indicator for ..., 
+* $x_{i4}$ is the indicator for ..., 
+
+for $i = 1, \ldots, `max(full_model$geese$id)`$, corresponding to the individual participants, and $j = 1,\ldots,`max(full_model$geese$clusz)`$
+corresponding to the questions.
+
+```{r, ref.label = 'full_model_time', echo = TRUE, eval = FALSE}
+```
+
+Comparing this model to the model with no interaction term
+```{r}
+# reduced_model <- geeglm(formula = log_time ~ Treatment + Question_Type,
+#                     id = Study_Id, data = free_rides[free_rides$Correct == 1,])
+# Waldts <- anova(reduced_model, full_model)
+# Waldts
+```
+we can conclude that the interaction term (i.e. the interplay between factor A and factor B) is/is not significant ($p$ - value $=`Waldts[1,3]`$). 
+
+## Comparison of factor A
+
+
+## Comparison of factor B
+
+# References
